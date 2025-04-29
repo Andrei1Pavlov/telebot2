@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Shop</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div id="main">
+        <h1>Онлайн магазин</h1>
+        <img src="https://cdn-icons-png.flaticon.com/512/98/98017.png">
+        <p>Добро пожаловать в магазин</p>
+        <button id="buy">Купить</button>
+    </div>
+    <form id="form">
+        <input type="text" placeholder="Имя" id="user_name" maxlength="6">
+        <input type="email" placeholder="Email" id="user_email">
+        <input type="tel" placeholder="Телефон" id="user_phone" pattern="\+?[0-9\s\-\(\)]+">
+        <button id="order">Оформить</button>
+        <p id="error" class="error-message"></p>
+    </form>
+    <div class="catalog">
+    <div class="product-card">
+        <img src="https://example.com/phone.jpg" class="product-image">
+        <h3>Смартфон</h3>
+        <p class="price">$599.99</p>
+        <button class="add-to-cart" data-id="1">В корзину</button>
+    </div>
+
+    <div class="product-card">
+        <img src="https://example.com/laptop.jpg" class="product-image">
+        <h3>Ноутбук</h3>
+        <p class="price">$1299.99</p>
+        <button class="add-to-cart" data-id="2">В корзину</button>
+    </div>
+</div>
+
+<div class="cart">
+    <h2>🛒 Корзина</h2>
+    <div id="cart-items"></div>
+    <button id="checkout">Оформить заказ</button>
+</div>
+    <script src="https://telegram.org/js/telegram-web-app.js?57"></script>
+    <script>
+    let tg = window.Telegram.WebApp;
+    let buy = document.getElementById("buy");
+    let order = document.getElementById("order");
+    let errorElement = document.getElementById("error");
+    tg.expand();
+
+
+    function isValidEmail(email) {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    }
+
+
+    function isValidPhone(phone) {
+        return /^\+?[0-9\s\-\(\)]{7,}$/.test(phone);
+    }
+
+    buy.addEventListener("click", () => {
+        document.getElementById("main").style.display = "none";
+        document.getElementById("form").style.display = "block";
+        let user = tg.initDataUnsafe.user;
+        if (user) {
+            let fullName = (user.first_name || "") + " " + (user.last_name || "");
+            document.getElementById("user_name").value = fullName.trim().substring(0, 6);
+        }
+    });
+
+    order.addEventListener("click", (e) => {
+        e.preventDefault();
+        errorElement.textContent = "";
+
+        let name = document.getElementById("user_name").value.trim();
+        let email = document.getElementById("user_email").value.trim();
+        let phone = document.getElementById("user_phone").value.trim();
+
+        // Проверки
+        if (!name || !email || !phone) {
+            errorElement.textContent = "Заполните все поля!";
+            return;
+        }
+
+        if (name.length > 6) {
+            errorElement.textContent = "Имя должно быть не длиннее 6 символов";
+            return;
+        }
+
+        if (!isValidEmail(email)) {
+            errorElement.textContent = "Введите корректный email (например: user@example.com)";
+            return;
+        }
+
+        if (!isValidPhone(phone)) {
+            errorElement.textContent = "Введите корректный номер телефона (например: +79991234567)";
+            return;
+        }
+
+        let data = {
+            name: name,
+            email: email,
+            phone: phone
+        };
+
+        tg.sendData(JSON.stringify(data));
+        tg.close();
+    });
+
+    let cart = [];
+
+document.querySelectorAll('.add-to-cart').forEach(button => {
+    button.addEventListener('click', () => {
+        const productId = button.dataset.id;
+        const product = {
+            id: productId,
+            name: button.parentElement.querySelector('h3').innerText,
+            price: parseFloat(button.parentElement.querySelector('.price').innerText.replace('$', ''))
+        };
+
+        cart.push(product);
+        updateCartDisplay();
+    });
+});
+
+function updateCartDisplay() {
+    const cartItems = document.getElementById('cart-items');
+    cartItems.innerHTML = cart.map(item => `
+        <div class="cart-item">
+            <span>${item.name}</span>
+            <span>$${item.price.toFixed(2)}</span>
+        </div>
+    `).join('');
+
+    document.getElementById('checkout').disabled = cart.length === 0;
+}
+
+document.getElementById('checkout').addEventListener('click', () => {
+    tg.sendData(JSON.stringify({
+        action: 'checkout',
+        items: cart,
+        user: {
+            name: document.getElementById('user_name').value,
+            email: document.getElementById('user_email').value,
+            phone: document.getElementById('user_phone').value
+        }
+    }));
+    tg.close();
+});
+    </script>
+</body>
+</html>
+
